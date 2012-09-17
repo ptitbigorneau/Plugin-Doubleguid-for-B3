@@ -1,10 +1,9 @@
 # DoubleGuid Plugin
 
 __author__  = 'PtitBigorneau www.ptitbigorneau.fr'
-__version__ = '1.0'
+__version__ = '1.1'
 
-
-import b3
+import b3, threading, thread, time
 import b3.plugin
 import b3.events
 from b3 import clients
@@ -12,6 +11,9 @@ from b3 import clients
 class DoubleguidPlugin(b3.plugin.Plugin):
     
     _adminPlugin = None   
+    _pluginactived = "on"
+    _adminlevel = 100
+    _immunityminlevel = 20
 
     def onStartup(self):
         
@@ -28,9 +30,23 @@ class DoubleguidPlugin(b3.plugin.Plugin):
 
     def onLoadConfig(self):
 
-        self._pluginactived = self.config.get('settings', 'pluginactived')
-        self._adminlevel = self.config.getint('settings', 'adminlevel')
-        self._immunityminlevel = self.config.getint('settings', 'immunityminlevel')
+        try:
+            self._pluginactived = self.config.get('settings', 'pluginactived')
+        except Exception, err:
+            self.warning("Using default value %s for DoubleGuid. %s" % (self._pluginactived, err))
+        self.debug('DoubleGuid : %s' % self._pluginactived)
+
+        try:        
+            self._adminlevel = self.config.getint('settings', 'adminlevel')
+        except Exception, err:
+            self.warning("Using default value %s for adminlevel. %s" % (self._adminlevel, err))
+        self.debug('adminlevel : %s' % self._adminlevel)
+
+        try:
+            self._immunityminlevel = self.config.getint('settings', 'immunityminlevel')
+        except Exception, err:
+            self.warning("Using default value %s for immunityminlevel. %s" % (self._immunityminlevel, err))
+        self.debug('immunityminlevel : %s' % self._immunityminlevel)
 
     def onEvent(self, event):
 
@@ -45,15 +61,42 @@ class DoubleguidPlugin(b3.plugin.Plugin):
             
                 client = event.client
             
-                if client.maxLevel >= self._immunityminlevel:
-            
-                    return False            
-                
                 for x in self.console.clients.getList():
 
                     if x.guid == client.guid and x.cid != client.cid:
 
-                        client.kick("Kick Double Guid",  None) 
+                        if x.ip == client.ip:
+                            if client.maxLevel < self._immunityminlevel:
+                                self._adminPlugin.warnClient(x, '%s ^3connects with your guid, same IP'%client.exactName, None, False, '', 60)
+                                client.kick("Kick Double Guid - Same IP",  None)
+                        
+                        if x.ip != client.ip:
+                            
+                            if client.maxLevel >= self._immunityminlevel:
+                                
+                                x.message("%s ^3connects with your guid and IP Different"%(client.exactName))
+                                x.message("^3Please Quickly Contact the Server Administrator")
+                                x.message("^3You will lose your level and be kicker"%(client.exactName))
+
+                                self.tgroups()
+                
+                                try:
+
+                                    group = clients.Group(keyword=self.rgkeyword)
+                                    group = self.console.storage.getGroup(group)
+                
+                                except:
+                                    self.console.write('Error change level!') 
+                    
+                                x.setGroup(group)
+                                x.save()
+                                
+                                thread.start_new_thread(self.pause, (x,))
+                            
+                            else:
+
+                                self._adminPlugin.warnClient(x, '%s ^3connects with your guid, IP Different'%client.exactName, None, False, '', 60)
+                                client.kick("Kick Double Guid - IP Different",  None)
 
     def cmd_doubleguid(self, data, client, cmd=None):
         
@@ -69,11 +112,11 @@ class DoubleguidPlugin(b3.plugin.Plugin):
         
             if self._pluginactived == 'on':
 
-                client.message('doubleguid ^2activated')
+                client.message('^3DoubleGuid ^2activated^7')
 
             if self._pluginactived == 'off':
 
-                client.message('doubleguid ^1deactivated')
+                client.message('^3DoubleGuid ^1deactivated^7')
 
             client.message('!doubleguid <on / off>')
             return
@@ -87,7 +130,7 @@ class DoubleguidPlugin(b3.plugin.Plugin):
 
             else:
 
-                client.message('doubleguid is already ^2activated') 
+                client.message('^3DoubleGuid is already ^2activated^7') 
 
                 return False
 
@@ -100,10 +143,43 @@ class DoubleguidPlugin(b3.plugin.Plugin):
 
             else:
                 
-                client.message('doubleguid is already ^1disabled')                
+                client.message('^3DoubleGuid is already ^1disabled^7')                
 
                 return False
 
-        client.message('doubleguid %s'%(message))
+        client.message('^3DoubleGuid %s^7'%(message))
 
+    def tgroups(self):
 
+        self.rgkeyword = None
+    
+        cursor = self.console.storage.query("""
+        SELECT *
+        FROM groups n 
+        """)
+
+        if cursor.EOF:
+  
+            cursor.close()            
+            
+            return False
+
+        while not cursor.EOF:
+        
+            sr = cursor.getRow()
+            gkeyword = sr['keyword']
+            glevel= sr['level']
+       
+            if glevel == "0":
+                self.rgkeyword = gkeyword
+
+            cursor.moveNext()
+    
+        cursor.close()
+      
+        return
+
+    def pause(self, xclient):
+
+        time.sleep(10)
+        xclient.kick("Admin Kick Double Guid - IP Different",  None)
