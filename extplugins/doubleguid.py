@@ -66,9 +66,10 @@ class DoubleguidPlugin(b3.plugin.Plugin):
                     if x.guid == client.guid and x.cid != client.cid:
 
                         if x.ip == client.ip:
+                            
                             if client.maxLevel < self._immunityminlevel:
                                 self._adminPlugin.warnClient(x, '%s ^3connects with your guid, same IP'%client.exactName, None, False, '', 60)
-                                client.kick("Kick Double Guid - Same IP",  None)
+                                client.kick("Double Guid - Same IP",  None)
                         
                         if x.ip != client.ip:
                             
@@ -76,10 +77,12 @@ class DoubleguidPlugin(b3.plugin.Plugin):
                                 
                                 x.message("%s ^3connects with your guid and IP Different"%(client.exactName))
                                 x.message("^3Please Quickly Contact the Server Administrator")
-                                x.message("^3You will lose your level and be kicker"%(client.exactName))
-
+                                x.message("^3You will lose your level and be kicker")
+                                
+                                client.kick("Admin Double Guid - IP Different",  None)
+                                
                                 self.tgroups()
-                
+
                                 try:
 
                                     group = clients.Group(keyword=self.rgkeyword)
@@ -96,7 +99,7 @@ class DoubleguidPlugin(b3.plugin.Plugin):
                             else:
 
                                 self._adminPlugin.warnClient(x, '%s ^3connects with your guid, IP Different'%client.exactName, None, False, '', 60)
-                                client.kick("Kick Double Guid - IP Different",  None)
+                                client.kick("Double Guid - IP Different",  None)
 
     def cmd_doubleguid(self, data, client, cmd=None):
         
@@ -170,16 +173,17 @@ class DoubleguidPlugin(b3.plugin.Plugin):
             gkeyword = sr['keyword']
             glevel= sr['level']
        
-            if glevel == "0":
+            if int(glevel) == 0:
                 self.rgkeyword = gkeyword
 
             cursor.moveNext()
     
         cursor.close()
-      
+        
         return
 
     def pause(self, xclient):
 
-        time.sleep(10)
-        xclient.kick("Admin Kick Double Guid - IP Different",  None)
+        time.sleep(30)
+
+        xclient.kick("Admin Double Guid - IP Different",  None)
