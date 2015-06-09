@@ -2,7 +2,7 @@
 # Plugin for B3 (www.bigbrotherbot.com)
 # www.ptitbigorneau.fr
 
-doubleguid plugin (v1.1) for B3
+doubleguid plugin (v1.2) for B3
 
 Installation:
 
